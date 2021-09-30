@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <!-- import CSS -->
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        .fixedWid {
+            width: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app">
+
+
+        <table id="table1" border="1" width="30%" cellpadding="0" cellspacing="0" bgcolor="#f0ffff" align="center">
+            <caption>
+                <h1 class="center">海明码计算</h1>
+            </caption>
+            <thead>
+
+                <el-row type="flex" class="row-bg" justify="center">
+                    <el-col :span="2">
+                        <el-tag type="warning">请选择校验方式</el-tag>
+                    </el-col>
+
+                    <el-col :span="6">
+                        <el-switch v-model="oddEven" active-text="偶校验" inactive-text="奇校验">
+                        </el-switch>
+
+                    </el-col>
+                    <el-col :span="6">
+
+                        <el-button type="primary" size="medium" @click="calCheckCode">点击计算校验码</el-button>
+                    </el-col>
+                </el-row>
+                <el-row type="flex" class="row-bg" justify="center">
+                    <el-col :span="2">
+                        <el-tag type="warning">请输入原始数据</el-tag>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-input type="text" placeholder="请输入内容" v-model="messageSent" :maxlength="colArrMax"
+                            show-word-limit>
+                    </el-col>
+                </el-row>
+                <el-row type="flex" class="row-bg" justify="center">
+                    <el-col :span="2">
+                        <el-tag type="info">计算得到海明码</el-tag>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-input type="text" placeholder="请输入内容" v-model="hammingCodeStr" :disabled="true"
+                            :maxlength="colArr.length" show-word-limit>
+                    </el-col>
+                </el-row>
+                <tr bgcolor="#ff7f50">
+                    <th>位数</th>
+                    <th v-for="value,index in colArr">
+                        <div class="fixedWid">{{value}}</div>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody align="center">
+                <tr>
+                    <td>原始数据</td>
+                    <td v-for="value,index in messageArr">
+                        <div class="fixedWid">{{value}}</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>原码(带校验位)</td>
+                    <td v-for="value,index in messagePool">
+                        <div class="fixedWid">{{value}}</div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>校验码</td>
+                    <td v-for="value,index in checkCodePool">
+                        <div class="fixedWid">{{value}}</div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>海明码</td>
+                    <td v-for="value,index in hammingCode">
+                        <div class="fixedWid">{{value}}</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <el-row type="flex" class="row-bg" justify="center">
+            <el-col :span="6">
+                <el-button type="primary" size="medium" @click="decodeHammingCode">点击decode海明码</el-button>
+            </el-col>
+        </el-row>
+
+        <el-row type="flex" class="row-bg" justify="center">
+            <el-col :span="2">
+                <el-tag type="warning">请输入海明码</el-tag>
+            </el-col>
+            <el-col :span="12">
+                <el-input type="text" placeholder="请输入内容" v-model="messageReceived" :maxlength="allLength"
+                    show-word-limit>
+            </el-col>
+
+        </el-row>
+        <el-row type="flex" class="row-bg" justify="center">
+            <el-col :span="2">
+                <el-tag type="info">计算得到原始数据</el-tag>
+            </el-col>
+            <el-col :span="12">
+                <el-input type="text" placeholder="请输入内容" v-model="originalMessageStr" :disabled="true"
+                    :maxlength="colArr.length" show-word-limit>
+            </el-col>
+        </el-row>
+
+        </el-table>
+        <table id="table2" border="1" width="30%" cellpadding="0" cellspacing="0" bgcolor="#f0ffff" align="center">
+            <caption>
+                <h1 class="center">海明码校验</h1>
+            </caption>
+            <thead>
+                <tr bgcolor="#ff7f50">
+                    <th>位数</th>
+                    <th v-for="value,index in colArr">
+                        <div class="fixedWid">{{value}}</div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody align="center">
+                <tr>
+                    <td>接收到的海明码</td>
+                    <td v-for="value,index in messageReceivedArr">
+                        <div class="fixedWid">{{value}}</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>正确的海明码</td>
+                    <td v-for="value,index in hammingCodeFixedArr">
+                        <div class="fixedWid">{{value}}</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>原始数据</td>
+                    <td v-for="value,index in originalMessage">
+                        <div class="fixedWid">{{value}}</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+<!-- 引入组件库 -->
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<!-- <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.js"></script> -->
+<script>
+    let colArr = [];
+
+    var app = new Vue({
+        el: '#app',
+        data: {
+            checkMax: 6,//校验码最大位数
+            oddEven: true,//true则采用偶校验
+            messageSent: '110010101',//原始数据
+            checkCode: [],//填充进校验码池的校验码数组
+            checkCodeDecoded: [],//海明码接收后的校错，有错村1，无措存0
+            hammingCode: [],//海明码
+            checkCodePool: [],//校验码池，初始为''，充满一整行
+            messageReceived: '1010100110001',//messageSent生成的应该是1010100110101
+            hammingCodeFixedArr: []
+        },
+        computed: {
+            originalMessage: function () {
+                let arr = this.hammingCodeFixedArr.filter((item, index) => {
+                    return this.isPowerOfTwo(index + 1) == false;
+                });
+                console.log('arr', arr);
+                return arr;
+            },
+            originalMessageStr: function () {
+                return this.originalMessage.join('');
+            },
+            erorPos: function () {
+                let count = 0;
+                for (let index = 0; index < this.checkCodeDecoded.length; index++) {
+                    let value = Math.pow(2, index) * this.checkCodeDecoded[index];
+                    count += value;
+                }
+                return count;
+            },
+            messageReceivedArr: function () {
+                return this.messageReceived.split('').map(Number);
+            },
+            colArr: function () {//位数池，充满一整行
+                let arr = new Array(this.allLength);
+                for (let index = 0; index < this.allLength; index++) {
+                    arr[index] = index + 1;
+                }
+                return arr;
+            },
+            allLength: function () {
+                return this.checkMax + this.colArrMax;
+            },
+            colArrMax: function () {
+                return Math.pow(2, this.checkMax) - this.checkMax - 1;
+            },
+            hammingCodeFixedStr: function () {
+                return this.hammingCodeFixedArr.join('');
+            },
+            hammingCodeArr: function () {
+                return this.hammingCode.filter(item => item !== '');
+            },
+
+            hammingCodeStr: function () {
+                return this.hammingCodeArr.join('').concat();
+            },
+            checkCodeLength: function () {//确定校验码长度
+                let breakthroughPoint = 0;
+                // console.log(`checkCodeLength——${this.checkCodeLength}`);
+                for (let index = 0; index <= this.checkMax; index++) {
+                    let total = Math.pow(2, index) - index - 1;
+                    console.log(`total——${total}`);
+                    if (total >= this.messageArrLength) {
+                        console.log(`this.messageArrLength${this.messageArrLength}`);
+                        breakthroughPoint = index;
+                        console.log('breakthroughPoint,,,,,', breakthroughPoint);
+                        break;
+                    }
+                }
+                console.log(`breakthroughPoint——${breakthroughPoint}`);
+                return breakthroughPoint;
+            },
+            allLengthReal: function () {
+                return this.checkCodeLength + this.messageArrLength;
+            },
+            messageArr: function () {//填充进信息池的信息码数组
+                return this.messageSent.split('').map(Number);
+            },
+            messageArrLength: function () {
+                console.log(`messageArrLength`, this.messageArr.length);
+                return this.messageArr.length;
+            },
+            messagePool: function () {//信息池，充满一整行
+                let arr = this.colArr.concat();
+                for (let index = 0, count1 = 0, count2 = 0; index < this.allLengthReal; index++) {
+                    // console.log('arr[index]', arr[index]);
+                    if (this.isPowerOfTwo(arr[index]) == true) {
+                        arr[index] = `P${count1}`;
+                        count1++;
+                    } else {
+                        arr[index] = this.messageArr[count2++];
+                    }
+                }
+                for (let index = this.allLengthReal; index < this.allLength; index++) {
+                    arr[index] = '';
+                }
+                return arr;
+            }
+        },
+        methods: {
+            fixHammingCode() {
+                
+                let index = this.errorPos - 1;
+                if (this.hammingCodeFixedArr[index] === 0) {
+                    Vue.set(this.hammingCodeFixedArr, index, 1);
+                } else {
+                    Vue.set(this.hammingCodeFixedArr, index, 0);
+                }
+                console.log('this.hammingCodeFixedArr', this.hammingCodeFixedArr);
+            },
+            judgeIsError() {
+                const res = this.checkCodeDecoded.some(item => {
+                    console.log(`item——${item}`);
+                    return item === 1;
+                })
+                return res;
+            },
+            decodeHammingCode() {
+                for (let i = 0; i < this.checkCodeLength; i++) {
+                    let value1 = Math.pow(2, i);//组别筛选模板，XXX1,XX1X,X1XX,1XXX
+                    console.log('value1', value1);
+                    let one_count = 0;
+                    for (let j = 0; j < this.allLengthReal; j++) {
+                        let value2 = this.colArr[j];//位数号，用来和组别作比较,1,2,3,4,5,6,7,8,9,10,11,12,13
+                        let res = value1 & value2;//组别筛选
+                        console.log('value2', value2);
+                        console.log('res', res);
+                        if (res === value1) {//与筛出的结果和模板值一致，如果归到该组，比如1,3,5,7,9,11,13归到P1组，XXX1，则统计组内0、1个数
+                            // P1=>XXX1=>1,3,5,7,9,11,13
+                            // P2=>XX1X=>2,3,6,7,10,11
+                            // P3=>X1XX=>4,5,6,7,12,13
+                            // P4=>1XXX=>8,9,10,11,12,13
+                            console.log(`this.messageReceived[j]${this.messageReceivedArr[j]}`);
+                            if (this.messageReceivedArr[j] === 1) {
+                                one_count++;
+                            }
+
+                        }
+                    }
+                    let xor = one_count % 2;
+                    Vue.set(this.checkCodeDecoded, i, xor);//对2取余，与异或一样效果，如果是偶数个1，则异或值为0，反之异或值为1
+                }
+                console.log(`this.checkCodeDecoded——`, this.checkCodeDecoded);
+                const res = this.judgeIsError();
+                this.hammingCodeFixedArr = this.messageReceivedArr.concat();
+                if (res === true) {
+                    let errorPos = 0;
+                    this.checkCodeDecoded.forEach((element, index) => {
+                        errorPos += Math.pow(2, index) * element;
+                    });
+                    this.errorPos = errorPos;
+                    this.$message.error(`有错误数据，位置在${errorPos}`);
+                    this.fixHammingCode();
+                    
+                } else {
+                    this.$message({
+                        message: '信息校验完毕，无误',
+                        type: 'success'
+                    });
+                }
+            },
+            isPowerOfTwo(nums) {//是2的幂则返回true
+                return 0 === (nums & nums - 1);
+            },
+            calCheckCode() {
+                for (let i = 0; i < this.checkCodeLength; i++) {
+                    let value1 = Math.pow(2, i);//组别筛选模板，XXX1,XX1X,X1XX,1XXX
+                    console.log('value1', value1);
+                    let zero_count = 0;
+                    let one_count = 0;
+                    for (let j = 0; j < this.allLengthReal; j++) {
+                        let value2 = this.colArr[j];//位数号，用来和组别作比较,1,2,3,4,5,6,7,8,9,10,11,12,13
+                        let res = value1 & value2;//组别筛选
+                        console.log('value2', value2);
+                        console.log('res', res);
+                        if (res === value1) {//如果归到该组，比如1,3,5,7,9,11,13归到P1组，XXX1，则统计组内0、1个数
+                            // P1=>XXX1=>1,3,5,7,9,11,13
+                            // P2=>XX1X=>2,3,6,7,10,11
+                            // P3=>X1XX=>4,5,6,7,12,13
+                            // P4=>1XXX=>8,9,10,11,12,13
+                            let value3 = this.messagePool[j];
+                            console.log(`j,value3-${j},${value3}`);
+                            if (value3 == 0) {
+                                zero_count++;
+                            } if (value3 == 1) {
+                                one_count++;
+                            }
+                        }
+                    }
+                    // 0个数，1个数，采用奇校验校验位计算得出的值，采用偶校验校验位计算得出的值
+                    let one_zero_count = { zero_count: zero_count, one_count: one_count, odd_value: -1, even_value: -1 };
+                    this.checkCode[i] = one_zero_count;
+                    console.log(this.checkCode);
+                }
+                this.placeCheckCode();
+                this.placeHammingCode();
+            },
+            placeCheckCode() {
+                for (let index = 0; index < this.allLength; index++) {
+                    Vue.set(this.checkCodePool, index, '');
+                }
+                console.log(`error--${this.checkCodeLength}`);
+                // 奇偶校验对应1的值计算保存
+                for (let i = 0; i < this.checkCodeLength; i++) {
+                    if (this.oddEven === true) {//偶校验,一组内(包含校验位)偶数个1
+                        console.log('偶校验,一组内(包含校验位)偶数个1');
+                        if (this.checkCode[i].one_count % 2 == 0) {//若组内已有1的个数为偶数，则偶校验计算得出的校验码应为0
+                            this.checkCode[i].even_value = 0;
+                        } else {//若组内已有1的个数为奇数，则偶校验计算得出的校验码应为
+                            this.checkCode[i].even_value = 1;
+                        }
+                    }
+                    else {//奇校验，一组内(包含校验位)应有奇数个1
+                        console.log('奇校验，一组内(包含校验位)应有奇数个1');
+                        if (this.checkCode[i].one_count % 2 == 0) {
+                            this.checkCode[i].odd_value = 1;
+                        } else {
+                            this.checkCode[i].odd_value = 0;
+                        }
+                    }
+
+                }
+
+                console.log('checkCodePool', this.checkCodePool);
+                for (let index = 0, count1 = 0; index < this.allLengthReal; index++) {
+                    // console.log('arr[index]', arr[index]);
+                    console.log(`index:${index},count1:${count1}`);
+                    console.log('this.checkCodePool[index]', this.checkCodePool[index]);
+                    if (this.isPowerOfTwo(this.colArr[index]) == true) {
+                        if (this.oddEven === true) {//偶校验
+                            console.log('偶校验');
+                            Vue.set(this.checkCodePool, index, this.checkCode[count1].even_value);
+                            count1++;
+                        } else {
+                            console.log('奇校验');
+                            Vue.set(this.checkCodePool, index, this.checkCode[count1].odd_value);
+                            this.checkCodePool[index] = this.checkCode[count1].odd_value;
+                            count1++;
+                        }
+                    }
+                }
+            },
+            placeHammingCode() {
+                console.log('this.messagePool', this.messagePool);
+                console.log('this.messageArr', this.messageArr);
+                console.log('this.checkCodePool', this.checkCodePool);
+                for (let index = 0; index < this.allLengthReal; index++) {
+                    Vue.set(this.hammingCode, index, '')
+                }
+                for (let index = 0, count1 = 0; index < this.allLengthReal; index++) {
+                    if (this.isPowerOfTwo(this.colArr[index]) == true) {
+                        Vue.set(this.hammingCode, index, this.checkCodePool[index]);
+                    } else {
+                        Vue.set(this.hammingCode, index, this.messageArr[count1++]);
+                    }
+                }
+            }
+        }
+    })
+</script>
+
+</html>
